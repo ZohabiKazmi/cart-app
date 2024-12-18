@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "ee2546e837f8a6588645de087804f2f9"
-application_url = "https://authorities-mails-instantly-geometry.trycloudflare.com"
+application_url = "https://office-cluster-artificial-recreation.trycloudflare.com"
 embedded = true
 name = "cart-app"
 handle = "cart-app-48"
@@ -19,9 +19,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://authorities-mails-instantly-geometry.trycloudflare.com/auth/callback",
-  "https://authorities-mails-instantly-geometry.trycloudflare.com/auth/shopify/callback",
-  "https://authorities-mails-instantly-geometry.trycloudflare.com/api/auth/callback"
+  "https://office-cluster-artificial-recreation.trycloudflare.com/auth/callback",
+  "https://office-cluster-artificial-recreation.trycloudflare.com/auth/shopify/callback",
+  "https://office-cluster-artificial-recreation.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
