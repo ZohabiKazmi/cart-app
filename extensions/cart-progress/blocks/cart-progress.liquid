@@ -1,0 +1,273 @@
+{% comment %} <style>
+.shipping-remaining-container {
+  padding: 12px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin: 10px 0;
+}
+
+.shipping-message {
+  text-align: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.shipping-progress-bar {
+  height: 4px;
+  background: #eee;
+  border-radius: 2px;
+  margin: 8px 0;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #000;
+  transition: width 0.3s ease;
+}
+
+.status-text {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #666;
+}
+</style>
+
+<div class="shipping-remaining-container" style="border: {{block.settings.box_border}}px solid {{block.settings.border_color}};" 
+     data-threshold="{{ block.settings.threshold_amount | times: 100 }}"
+     data-cart-total="{{ cart.total_price }}">
+  {% assign threshold_amount = block.settings.threshold_amount | times: 100 %}
+  {% assign cart_total = cart.total_price %}
+  {% assign remaining_amount = threshold_amount | minus: cart_total %}
+  
+  <div class="shipping-bar-wrapper">
+    <div class="shipping-message">
+      {% if cart_total >= threshold_amount %}
+        <span>{{ block.settings.reward_text }}</span>
+      {% else %}
+        <span>{{ block.settings.message_prefix }} {{ remaining_amount | money }} {{ block.settings.message_suffix }}</span>
+      {% endif %}
+    </div>
+    
+    <div class="shipping-progress-bar">
+      {% assign progress_percentage = cart_total | times: 100 | divided_by: threshold_amount | at_most: 100 %}
+      <div class="progress-fill" style="width: {{ progress_percentage }}%; background: {{ block.settings.bar_color }}">.</div>
+    </div>
+    
+    <div class="status-text">
+      <span>{{ block.settings.reward_text }}</span>
+      <span>{{ block.settings.discount_text }}</span>
+    </div>
+  </div>
+</div>
+{% endcomment %}
+
+{% comment %} <script>
+function updateShippingProgress() {
+  const containers = document.querySelectorAll('.shipping-remaining-container');
+  
+  containers.forEach(container => {
+    // Get values from data attributes
+    const threshold = parseInt(container.getAttribute('data-threshold'));
+    const cartTotal = parseInt(container.getAttribute('data-cart-total'));
+    
+    // Calculate progress and remaining amount
+    const progress = Math.min(100, (cartTotal / threshold) * 100);
+    const remaining = Math.max(0, threshold - cartTotal);
+    
+    // Update progress bar
+    const progressBar = container.querySelector('.progress-fill');
+    progressBar.style.width = `${progress}%`; 
+
+    // Update message
+    const message = container.querySelector('.shipping-message span');
+    if (cartTotal >= threshold) {
+      message.textContent = '{{ block.settings.reward_text }}';
+    } else {
+      const formattedAmount = Shopify.formatMoney(remaining);
+      message.textContent = '{{ block.settings.message_prefix }} ' + formattedAmount + ' {{ block.settings.message_suffix }}';
+    }
+  });
+}
+
+// Update on page load
+updateShippingProgress();
+
+// Listen for cart updates
+document.addEventListener('cart:updated', function(event) {
+  // Update data-cart-total attribute with new cart total
+  const containers = document.querySelectorAll('.shipping-remaining-container');
+  containers.forEach(container => {
+    container.setAttribute('data-cart-total', event.detail.cart.total_price);
+  });
+  
+  updateShippingProgress();
+});
+</script>
+ {% endcomment %}
+ {% schema %}
+    {
+      "name": "Multiple Discount Bars",
+      "target": "section",
+      "settings": []
+    }
+    {% endschema %}
+    
+    {% assign spending_goals = app.metafields.cart-app.spending_goals | json | parse_json %}
+    {% assign design_settings = app.metafields.cart-app.design_settings | json | parse_json %}
+    
+    <style>
+    .shipping-remaining-container {
+      padding: 12px;
+      background: white;
+      border-radius: {{ design_settings.borderRadius }}px;
+      margin: 10px 0;
+      border: {{ design_settings.borderWidth }}px solid #e7e5e5;
+    }
+    
+    .shipping-message {
+      text-align: center;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .shipping-progress-bar {
+      height: {{ design_settings.boxStroke }}px;
+      background: #eee;
+      border-radius: {{ design_settings.cornerRadius }}px;
+      margin: 8px 0;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: {{ design_settings.color }};
+      transition: width 0.3s ease;
+    }
+    
+    .status-text {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #666;
+    }
+    </style>
+    
+    {% for goal in spending_goals %}
+      {% assign threshold_amount = goal.spendingGoal | times: 100 %}
+      {% assign cart_total = cart.total_price %}
+      {% assign remaining_amount = threshold_amount | minus: cart_total %}
+      {% assign placeholder = '{{amount_left}}' %}
+      
+      <div class="shipping-remaining-container" 
+           data-threshold="{{ threshold_amount }}"
+           data-cart-total="{{ cart_total }}"
+           data-index="{{ forloop.index0 }}">
+        <div class="shipping-bar-wrapper">
+          <div class="shipping-message">
+            {% if cart_total >= threshold_amount %}
+              {% case goal.selectedTab %}
+                {% when 0 %}
+                  <span>{{ goal.freeShipping }}</span>
+                {% when 1 %}
+                  <span>{{ goal.percent | default: goal.percentageDiscount | append: '% off' }}</span>
+                {% when 2 %}
+                  <span>{{ goal.fixedAmount | default: '$' | append: goal.fixedAmountDiscount | append: ' off' }}</span>
+              {% endcase %}
+            {% else %}
+            
+            <span>{{ goal.announcement | replace: placeholder, remaining_amount | money }}</span>
+            {% endif %}
+          </div>
+          
+          <div class="shipping-progress-bar">
+            {% assign progress_percentage = cart_total | times: 100 | divided_by: threshold_amount | at_most: 100 %}
+            <div class="progress-fill" style="width: {{ progress_percentage }}%">.</div>
+          </div>
+          
+          <div class="status-text">
+            <span>$0</span>
+            <span>${{ threshold_amount | divided_by: 100 }}</span>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+    
+    <script>
+    function updateShippingProgress() {
+      const containers = document.querySelectorAll('.shipping-remaining-container');
+      const goals = {{ spending_goals | json }};
+      
+      containers.forEach(container => {
+        const threshold = parseInt(container.getAttribute('data-threshold'));
+        const cartTotal = parseInt(container.getAttribute('data-cart-total'));
+        const index = parseInt(container.getAttribute('data-index'));
+        const goal = goals[index];
+        
+        const progress = Math.min(100, (cartTotal / threshold) * 100);
+        const remaining = Math.max(0, threshold - cartTotal);
+        
+        const progressBar = container.querySelector('.progress-fill');
+        progressBar.style.width = `${progress}%`;
+        
+        const message = container.querySelector('.shipping-message span');
+        if (cartTotal >= threshold) {
+          switch(goal.selectedTab) {
+            case 0:
+              message.textContent = goal.freeShipping;
+              break;
+            case 1:
+              message.textContent = goal.percent || `${goal.percentageDiscount}% off`;
+              break;
+            case 2:
+              message.textContent = goal.fixedAmount || `$${goal.fixedAmountDiscount} off`;
+              break;
+          }
+        } else {
+          const formattedAmount = Shopify.formatMoney(remaining);
+          message.textContent = goal.announcement.replace('{{amount_left}}', formattedAmount);
+        }
+      });
+    }
+    
+    updateShippingProgress();
+    
+    document.addEventListener('cart:updated', function(event) {
+      const containers = document.querySelectorAll('.shipping-remaining-container');
+      containers.forEach(container => {
+        container.setAttribute('data-cart-total', event.detail.cart.total_price);
+      });
+      
+      updateShippingProgress();
+    });
+    </script>
+    
+    {% comment %}Debug metafields{% endcomment %}
+    <script>
+    console.log('App object:', {{ app | json }});
+    console.log('App metafields direct:', {{ app.metafields | json }});
+    console.log('Alternative access:', {{ shop.metafields['cart-app'] | json }});
+
+    // Try accessing individual values
+    console.log('Spending goals direct:', '{{ app.metafields.cart-app.spending_goals }}');
+    console.log('Design settings direct:', '{{ app.metafields.cart-app.design_settings }}');
+    </script>
+    
+    {% comment %}Approach 1: Access metafields directly without json filter{% endcomment %}
+    {% assign raw_spending_goals = app.metafields.cart-app.spending_goals %}
+    {% assign raw_design_settings = app.metafields.cart-app.design_settings %}
+
+    <script>
+    // Debug output
+    console.log('Raw spending goals:', '{{ raw_spending_goals }}');
+    console.log('Raw design settings:', '{{ raw_design_settings }}');
+
+    // Try accessing through global metafields
+    console.log('Global metafields:', '{{ shop.metafields.cart-app.spending_goals }}');
+
+    // Check if app is available
+    console.log('App available:', '{{ app.id }}');
+    console.log('App title:', '{{ app.title }}');
+    </script>

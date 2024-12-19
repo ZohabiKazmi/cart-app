@@ -1,0 +1,13 @@
+name = "cart-progress"
+type = "theme"
+
+[[metafields]]
+namespace = "cart-app"
+key = "spending_goals"
+type = "json"
+
+[[metafields]]
+namespace = "cart-app"
+key = "design_settings"
+type = "json"
+

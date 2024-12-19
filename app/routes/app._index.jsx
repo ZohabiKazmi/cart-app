@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useFetcher } from "@remix-run/react";
 import {
+  Frame,
   Page,
   Layout,
   LegacyCard,
@@ -13,6 +14,7 @@ import {
   Tabs,
   Box,
   ColorPicker,
+  Toast,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { SpendingGoal } from "./components/SpendingGoal";
@@ -148,7 +150,7 @@ export default function Index() {
         hue: h,
         saturation: s,
         brightness: v,
-        alpha: color.alpha,
+        alpha: color.alpha, // Preserve existing alpha
       };
     },
     [color.alpha],
@@ -169,188 +171,305 @@ export default function Index() {
     [hexToHsb],
   );
 
+  // Inside the component, add state for loading and toast
+  const [isLoading, setIsLoading] = useState(false);
+  const [toastActive, setToastActive] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastError, setToastError] = useState(false);
+
+  // Update the handleSave function
+  const handleSave = useCallback(async () => {
+    setIsLoading(true);
+    const settings = {
+      spendingGoals: spendingGoals.map((goal) => ({
+        spendingGoal: goal.spendingGoal,
+        announcement: goal.announcement,
+        selectedTab: goal.selectedTab,
+        freeShipping: goal.freeShipping,
+        percentageDiscount: goal.percentageDiscount,
+        percent: goal.percent,
+        fixedAmountDiscount: goal.fixedAmountDiscount,
+        fixedAmount: goal.fixedAmount,
+      })),
+      design: {
+        color: hsbToHex(color),
+        boxStroke,
+        cornerRadius,
+        borderWidth,
+        borderRadius,
+      },
+    };
+
+    try {
+      const response = await fetcher.submit(
+        { settings: JSON.stringify(settings) },
+        { method: "post", action: "/api/settings" },
+      );
+
+      setToastMessage("Settings saved successfully");
+      setToastError(false);
+    } catch (error) {
+      setToastMessage("Failed to save settings");
+      setToastError(true);
+    } finally {
+      setIsLoading(false);
+      setToastActive(true);
+    }
+  }, [
+    spendingGoals,
+    color,
+    boxStroke,
+    cornerRadius,
+    borderWidth,
+    borderRadius,
+    fetcher,
+    hsbToHex,
+  ]);
+
+  // Add a toast component
+  const toastMarkup = toastActive ? (
+    <Toast
+      content={toastMessage}
+      error={toastError}
+      onDismiss={() => setToastActive(false)}
+    />
+  ) : null;
+
   return (
-    <Page>
-      <TitleBar title="Cart App" primaryAction={{ content: "Save" }} />
-      <BlockStack gap="500">
-        <Layout>
-          <Layout.Section>
-            <LegacyCard>
-              <LegacyTabs
-                tabs={tabs}
-                selected={selectedTab}
-                onSelect={handleTabChange}
-                fitted
-              >
-                <LegacyCard.Section title={tabs[selectedTab].content}>
-                  {selectedTab === 0 ? (
-                    <>
-                      {/* Dynamic Spending Goals */}
-                      {spendingGoals.map((goal) => (
-                        <SpendingGoal
-                          key={goal.id}
-                          id={goal.id}
-                          onDelete={handleDeleteSpendingGoal}
-                        />
-                      ))}
-                      <div style={{ margin: "1rem 0 0 0" }}>
-                        <Button
-                          variant="primary"
-                          fullWidth
-                          onClick={handleAddSpendingGoal}
-                        >
-                          Add new discount
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {/* Design Fields */}
-                      <Box
-                        style={{
-                          display: "flex",
-                          gap: "20px",
-                          alignItems: "center",
-                        }}
-                      >
-                        <TextField
-                          label="Progress bar thickness"
-                          type="number"
-                          value={boxStroke}
-                          onChange={(value) => setBoxStroke(value)}
-                          suffix="px"
-                          autoComplete="off"
-                          style={{ width: "120px" }}
-                        />
-                        <Text variant="bodyMd" as="p" color="subdued">
-                          Thickness in pixels
-                        </Text>
-                      </Box>
-
-                      <Box
-                        style={{
-                          display: "flex",
-                          gap: "20px",
-                          alignItems: "center",
-                        }}
-                      >
-                        <TextField
-                          label="Corner Radius"
-                          type="number"
-                          value={cornerRadius}
-                          onChange={(value) => setCornerRadius(value)}
-                          suffix="px"
-                          autoComplete="off"
-                          style={{ width: "120px" }}
-                        />
-                        <Text variant="bodyMd" as="p">
-                          Radius in pixels
-                        </Text>
-                      </Box>
-
-                      <Box
-                        style={{
-                          display: "flex",
-                          gap: "20px",
-                          alignItems: "center",
-                        }}
-                      >
-                        <TextField
-                          label="Border Width"
-                          type="number"
-                          value={borderWidth}
-                          onChange={(value) => setBorderWidth(value)}
-                          suffix="px"
-                          autoComplete="off"
-                          style={{ width: "120px" }}
-                        />
-                        <Text variant="bodyMd" as="p" color="subdued">
-                          Width in pixels
-                        </Text>
-                      </Box>
-
-                      <Box
-                        style={{
-                          display: "flex",
-                          gap: "20px",
-                          alignItems: "center",
-                        }}
-                      >
-                        <TextField
-                          label="Border Radius"
-                          type="number"
-                          value={borderRadius}
-                          onChange={(value) => setBorderRadius(value)}
-                          suffix="px"
-                          autoComplete="off"
-                          style={{ width: "120px" }}
-                        />
-                        <Text variant="bodyMd" as="p" color="subdued">
-                          Radius in pixels
-                        </Text>
-                      </Box>
-
-                      <Box gap="200px">
-                        <Text variant="headingMd" as="p">
-                          Colors
-                        </Text>
-                        <div style={{ position: "relative" }}>
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: "1rem",
-                              alignItems: "center",
-                            }}
+    <Frame>
+      <Page>
+        <TitleBar
+          title="Cart App"
+          primaryAction={{
+            content: "Save",
+            onAction: handleSave,
+            loading: isLoading,
+          }}
+        />
+        <BlockStack gap="500">
+          <Layout>
+            <Layout.Section>
+              <LegacyCard>
+                <LegacyTabs
+                  tabs={tabs}
+                  selected={selectedTab}
+                  onSelect={handleTabChange}
+                  fitted
+                >
+                  <LegacyCard.Section title={tabs[selectedTab].content}>
+                    {selectedTab === 0 ? (
+                      <>
+                        {/* Dynamic Spending Goals */}
+                        {spendingGoals.map((goal) => (
+                          <SpendingGoal
+                            key={goal.id}
+                            id={goal.id}
+                            onDelete={handleDeleteSpendingGoal}
+                          />
+                        ))}
+                        <div style={{ margin: "1rem 0 0 0" }}>
+                          <Button
+                            variant="primary"
+                            fullWidth
+                            onClick={handleAddSpendingGoal}
                           >
-                            <div
-                              onClick={() => {
-                                const picker = document.getElementById("color_picker_container");
-                                picker.style.display = picker.style.display === "none" ? "block" : "none";
-                              }}
-                              style={{
-                                width: "6rem",
-                                height: "2.5rem",
-                                backgroundColor: `hsla(${color.hue}, ${color.saturation * 100}%, ${color.brightness * 100}%, ${color.alpha})`,
-                                border: "1px solid lightgray",
-                                borderRadius: "8px",
-                                cursor: "pointer",
-                              }}
-                            />
-                            <TextField
-                              label="Hex Color"
-                              value={hsbToHex(color)}
-                              onChange={handleHexChange}
-                              autoComplete="off"
-                              placeholder="#000000"
-                              maxLength={7}
-                            />
-                          </div>
-                          <div
-                            id="color_picker_container"
-                            style={{
-                              display: "none",
-                              position: "fixed",
-                              zIndex: 1000,
-                              background: "white",
-                              padding: "1rem",
-                              boxShadow: "0 0 10px rgba(0,0,0,0.1)",
-                              borderRadius: "8px",
-                            }}
-                          >
-                            <ColorPicker onChange={handleColorChange} color={color} allowAlpha />
-                          </div>
+                            Add new discount
+                          </Button>
                         </div>
-                      </Box>
+                      </>
+                    ) : (
+                      <>
+                        {/* Design Fields */}
+                        <Box
+                          style={{
+                            display: "flex",
+                            gap: "20px",
+                            alignItems: "center",
+                          }}
+                        >
+                          <TextField
+                            label="Progress bar thickness"
+                            type="number"
+                            value={boxStroke}
+                            onChange={(value) => setBoxStroke(value)}
+                            suffix="px"
+                            autoComplete="off"
+                            style={{ width: "120px" }}
+                          />
+                          <Text variant="bodyMd" as="p" color="subdued">
+                            Thickness in pixels
+                          </Text>
+                        </Box>
 
-                      {/* <Color/> */}
-                    </>
-                  )}
-                </LegacyCard.Section>
-              </LegacyTabs>
-            </LegacyCard>
-          </Layout.Section>
-        </Layout>
-      </BlockStack>
-    </Page>
+                        <Box
+                          style={{
+                            display: "flex",
+                            gap: "20px",
+                            alignItems: "center",
+                          }}
+                        >
+                          <TextField
+                            label="Corner Radius"
+                            type="number"
+                            value={cornerRadius}
+                            onChange={(value) => setCornerRadius(value)}
+                            suffix="px"
+                            autoComplete="off"
+                            style={{ width: "120px" }}
+                          />
+                          <Text variant="bodyMd" as="p">
+                            Radius in pixels
+                          </Text>
+                        </Box>
+
+                        <Box
+                          style={{
+                            display: "flex",
+                            gap: "20px",
+                            alignItems: "center",
+                          }}
+                        >
+                          <TextField
+                            label="Border Width"
+                            type="number"
+                            value={borderWidth}
+                            onChange={(value) => setBorderWidth(value)}
+                            suffix="px"
+                            autoComplete="off"
+                            style={{ width: "120px" }}
+                          />
+                          <Text variant="bodyMd" as="p" color="subdued">
+                            Width in pixels
+                          </Text>
+                        </Box>
+
+                        <Box
+                          style={{
+                            display: "flex",
+                            gap: "20px",
+                            alignItems: "center",
+                          }}
+                        >
+                          <TextField
+                            label="Border Radius"
+                            type="number"
+                            value={borderRadius}
+                            onChange={(value) => setBorderRadius(value)}
+                            suffix="px"
+                            autoComplete="off"
+                            style={{ width: "120px" }}
+                          />
+                          <Text variant="bodyMd" as="p" color="subdued">
+                            Radius in pixels
+                          </Text>
+                        </Box>
+
+                        <div style={{ margin: "1rem 0" }}>
+                          <Divider />
+                        </div>
+
+                        <Box gap="200px">
+                          <Text variant="headingMd" as="p">
+                            Colors
+                          </Text>
+                          <div style={{ position: "relative" }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: "1rem",
+                                alignItems: "center",
+                              }}
+                            >
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const picker = document.getElementById(
+                                    "color_picker_container",
+                                  );
+                                  picker.style.display = "block";
+
+                                  const handleClickOutside = (event) => {
+                                    if (
+                                      !event.target.closest(
+                                        "#color_picker_container",
+                                      )
+                                    ) {
+                                      picker.style.display = "none";
+                                      document.removeEventListener(
+                                        "click",
+                                        handleClickOutside,
+                                      );
+                                    }
+                                  };
+
+                                  // Add the listener on the next tick to avoid immediate trigger
+                                  setTimeout(() => {
+                                    document.addEventListener(
+                                      "click",
+                                      handleClickOutside,
+                                    );
+                                  }, 0);
+                                }}
+                                style={{
+                                  width: "6rem",
+                                  height: "2.5rem",
+                                  backgroundColor: `hsla(${color.hue}, ${color.saturation * 100}%, ${color.brightness * 100}%, ${color.alpha})`,
+                                  border: "1px solid lightgray",
+                                  borderRadius: "8px",
+                                  cursor: "pointer",
+                                }}
+                              />
+                            </div>
+                            <div
+                              id="color_picker_container"
+                              style={{
+                                display: "none",
+                                position: "fixed",
+                                zIndex: 1000,
+                                background: "white",
+                                padding: "1rem",
+                                boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+                                borderRadius: "8px",
+                              }}
+                            >
+                              <ColorPicker
+                                onChange={handleColorChange}
+                                color={color}
+                                allowAlpha
+                              />
+                              <TextField
+                                label="Hex Color"
+                                value={hsbToHex(color)}
+                                onChange={handleHexChange}
+                                autoComplete="off"
+                                placeholder="#000000"
+                                maxLength={7}
+                              />
+                            </div>
+                          </div>
+                        </Box>
+
+                        {/* <Color/> */}
+                      </>
+                    )}
+                  </LegacyCard.Section>
+                </LegacyTabs>
+              </LegacyCard>
+              <div style={{ marginTop: "1rem" }}>
+                <Button
+                  primary
+                  fullWidth
+                  onClick={handleSave}
+                  loading={isLoading}
+                >
+                  Save Settings
+                </Button>
+              </div>
+            </Layout.Section>
+          </Layout>
+        </BlockStack>
+        {toastMarkup}
+      </Page>
+    </Frame>
   );
 }
