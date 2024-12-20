@@ -62,8 +62,6 @@ export default function Index() {
     alpha: 0.7,
   });
 
-  
-
   // Convert HSB to Hex
   const hsbToHex = useCallback((hsb) => {
     const { hue, saturation, brightness, alpha } = hsb;
