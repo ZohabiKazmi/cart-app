@@ -12,9 +12,7 @@ export function SpendingGoal({ id, onDelete }) {
   const [selectedTab, setSelectedTab] = useState(0);
   const [freeShipping, setFreeShipping] = useState("Free Shipping 🚚");
   const [percentageDiscount, setPercentageDiscount] = useState("5");
-  const [percent, setPercent] = useState("");
   const [fixedAmountDiscount, setFixedAmountDiscount] = useState("5");
-  const [fixedAmount, setFixedAmount] = useState("");
   const [announcement, setAnnouncement] = useState(
     "Add {{amount_left}} to get free shipping! 🚚"
   );
@@ -28,6 +26,13 @@ export function SpendingGoal({ id, onDelete }) {
   const handleTabChange = useCallback((selectedTabIndex) => {
     setSelectedTab(selectedTabIndex);
   }, []);
+
+  const percentDisplay = `${percentageDiscount}% off`;
+  const fixedAmountDisplay = `$${fixedAmountDiscount} off`;
+
+  const handleNumericInput = (value) => {
+    return value >= 0 ? value : "0"; // Prevent negative inputs
+  };
 
   return (
     <>
@@ -44,7 +49,6 @@ export function SpendingGoal({ id, onDelete }) {
           variant="plain"
           tone="critical"
           onClick={() => onDelete(id)}
-          // disabled={id === 1} 
         >
           Delete Discount
         </Button>
@@ -53,14 +57,14 @@ export function SpendingGoal({ id, onDelete }) {
         label={`Target Amount ${id}`}
         type="number"
         value={spendingGoal}
-        onChange={(value) => setSpendingGoal(value)}
+        onChange={(value) => setSpendingGoal(handleNumericInput(value))}
         suffix="px"
         autoComplete="off"
       />
       <Text variant="bodyMd" as="p">
         Spending goal in your store's primary currency
       </Text>
-      <div style={{marginTop: "1rem"}}></div>
+      <div style={{ marginTop: "1rem" }}></div>
       <LegacyCard>
         <Tabs
           tabs={tabs}
@@ -75,14 +79,14 @@ export function SpendingGoal({ id, onDelete }) {
                   label="Reward Text"
                   type="text"
                   value={freeShipping}
-                  onChange={(value) => setFreeShipping(value)}
+                  onChange={setFreeShipping}
                   autoComplete="off"
                 />
                 <TextField
                   label="Text before the goal is reached"
                   type="text"
                   value={announcement}
-                  onChange={(value) => setAnnouncement(value)}
+                  onChange={setAnnouncement}
                   autoComplete="off"
                 />
               </>
@@ -93,15 +97,17 @@ export function SpendingGoal({ id, onDelete }) {
                   label="Set Percentage for Discount"
                   type="number"
                   value={percentageDiscount}
-                  onChange={(value) => setPercentageDiscount(value)}
+                  onChange={(value) =>
+                    setPercentageDiscount(handleNumericInput(value))
+                  }
                   suffix="%"
                   autoComplete="off"
                 />
                 <TextField
                   label="Reward Text"
                   type="text"
-                  value={percent || `${percentageDiscount}% off`}
-                  onChange={(value) => setPercent(value)}
+                  value={percentDisplay}
+                  onChange={() => {}} // Disabled as it's auto-calculated
                   autoComplete="off"
                 />
               </>
@@ -112,15 +118,17 @@ export function SpendingGoal({ id, onDelete }) {
                   label="Set Fixed Amount"
                   type="number"
                   value={fixedAmountDiscount}
-                  onChange={(value) => setFixedAmountDiscount(value)}
+                  onChange={(value) =>
+                    setFixedAmountDiscount(handleNumericInput(value))
+                  }
                   suffix="$"
                   autoComplete="off"
                 />
                 <TextField
                   label="Reward Text"
                   type="text"
-                  value={fixedAmount || `$${fixedAmountDiscount} off`}
-                  onChange={(value) => setFixedAmount(value)}
+                  value={fixedAmountDisplay}
+                  onChange={() => {}} // Disabled as it's auto-calculated
                   autoComplete="off"
                 />
               </>

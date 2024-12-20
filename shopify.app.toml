@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "ee2546e837f8a6588645de087804f2f9"
-application_url = "https://revised-gay-precision-aj.trycloudflare.com"
+application_url = "https://configurations-bite-kiss-lm.trycloudflare.com"
 embedded = true
 name = "cart-app"
 handle = "cart-app-48"
@@ -16,12 +16,13 @@ api_version = "2024-10"
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "write_products"
+scopes = "read_app_metafields" , "write_app_metafields"
 
 [auth]
 redirect_urls = [
-  "https://revised-gay-precision-aj.trycloudflare.com/auth/callback",
-  "https://revised-gay-precision-aj.trycloudflare.com/auth/shopify/callback",
-  "https://revised-gay-precision-aj.trycloudflare.com/api/auth/callback"
+  "https://configurations-bite-kiss-lm.trycloudflare.com/auth/callback",
+  "https://configurations-bite-kiss-lm.trycloudflare.com/auth/shopify/callback",
+  "https://configurations-bite-kiss-lm.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

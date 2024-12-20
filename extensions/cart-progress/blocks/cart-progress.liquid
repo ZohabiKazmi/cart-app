@@ -114,6 +114,8 @@ document.addEventListener('cart:updated', function(event) {
       "settings": []
     }
     {% endschema %}
+
+{% comment %}     
     
     {% assign spending_goals = app.metafields.cart-app.spending_goals | json | parse_json %}
     {% assign design_settings = app.metafields.cart-app.design_settings | json | parse_json %}
@@ -243,31 +245,166 @@ document.addEventListener('cart:updated', function(event) {
       updateShippingProgress();
     });
     </script>
+     {% endcomment %}
+
+
+{% comment %}First, get and parse the metafields safely{% endcomment %}
+{%- assign raw_spending_goals = app.metafields.cart-app.spending_goals -%}
+{%- assign raw_design_settings = app.metafields.cart-app.design_settings -%}
+
+{% if raw_spending_goals != blank and raw_design_settings != blank %}
+  {%- assign spending_goals = raw_spending_goals -%}
+  {%- assign design_settings = raw_design_settings -%}
+
+  <style>
+    .shipping-remaining-container {
+      padding: 12px;
+      background: white;
+      border-radius: {{ design_settings.borderRadius | default: 8 }}px;
+      margin: 10px 0;
+      border: {{ design_settings.borderWidth | default: 1 }}px solid #e7e5e5;
+    }
     
-    {% comment %}Debug metafields{% endcomment %}
-    <script>
-    console.log('App object:', {{ app | json }});
-    console.log('App metafields direct:', {{ app.metafields | json }});
-    console.log('Alternative access:', {{ shop.metafields['cart-app'] | json }});
-
-    // Try accessing individual values
-    console.log('Spending goals direct:', '{{ app.metafields.cart-app.spending_goals }}');
-    console.log('Design settings direct:', '{{ app.metafields.cart-app.design_settings }}');
-    </script>
+    .shipping-message {
+      text-align: center;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
     
-    {% comment %}Approach 1: Access metafields directly without json filter{% endcomment %}
-    {% assign raw_spending_goals = app.metafields.cart-app.spending_goals %}
-    {% assign raw_design_settings = app.metafields.cart-app.design_settings %}
+    .shipping-progress-bar {
+      height: {{ design_settings.boxStroke | default: 4 }}px;
+      background: #eee;
+      border-radius: {{ design_settings.cornerRadius | default: 2 }}px;
+      margin: 8px 0;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: {{ design_settings.color | default: '#000000' }};
+      transition: width 0.3s ease;
+    }
+    
+    .status-text {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
 
-    <script>
-    // Debug output
-    console.log('Raw spending goals:', '{{ raw_spending_goals }}');
-    console.log('Raw design settings:', '{{ raw_design_settings }}');
+  {% for goal in spending_goals %}
+    {% assign threshold_amount = goal.spendingGoal | times: 100 | default: 5000 %}
+    {% assign cart_total = cart.total_price %}
+    {% assign remaining_amount = threshold_amount | minus: cart_total %}
+    {% assign placeholder = '{{amount_left}}' %}
+    
+    <div class="shipping-remaining-container" 
+         data-threshold="{{ threshold_amount }}"
+         data-cart-total="{{ cart_total }}"
+         data-index="{{ forloop.index0 }}"
+         data-goal="{{ goal | json | escape }}">
+      <div class="shipping-bar-wrapper">
+        <div class="shipping-message">
+          {% if cart_total >= threshold_amount %}
+            {% case goal.selectedTab %}
+              {% when 0 %}
+                <span>{{ goal.freeShipping | default: 'Free Shipping! 🚚' }}</span>
+              {% when 1 %}
+                <span>{{ goal.percent | default: goal.percentageDiscount | append: '% off' }}</span>
+              {% when 2 %}
+                <span>{{ goal.fixedAmount | default: '$' | append: goal.fixedAmountDiscount | append: ' off' }}</span>
+              {% else %}
+                <span>{{ goal.freeShipping | default: 'Free Shipping! 🚚' }}</span>
+            {% endcase %}
+          {% else %}
+            {% assign default_message = 'Add ' | append: remaining_amount | money | append: ' for free shipping! 🚚' %}
+            <span>{{ goal.announcement | default: default_message | replace: placeholder, remaining_amount | money }}</span>
+          {% endif %}
+        </div>
+        
+        <div class="shipping-progress-bar">
+          {% assign progress_percentage = cart_total | times: 100.0 | divided_by: threshold_amount | at_most: 100 %}
+          <div class="progress-fill" style="width: {{ progress_percentage }}%"></div>
+        </div>
+        
+        <div class="status-text">
+          <span>$0</span>
+          <span>${{ threshold_amount | divided_by: 100.0 }}</span>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
 
-    // Try accessing through global metafields
-    console.log('Global metafields:', '{{ shop.metafields.cart-app.spending_goals }}');
+  <script>
+    function updateShippingProgress() {
+      const containers = document.querySelectorAll('.shipping-remaining-container');
+      
+      containers.forEach(container => {
+        const threshold = parseInt(container.getAttribute('data-threshold'));
+        const cartTotal = parseInt(container.getAttribute('data-cart-total'));
+        const goalData = JSON.parse(container.getAttribute('data-goal'));
+        
+        const progress = Math.min(100, (cartTotal / threshold) * 100);
+        const remaining = Math.max(0, threshold - cartTotal);
+        
+        const progressBar = container.querySelector('.progress-fill');
+        progressBar.style.width = `${progress}%`;
+        
+        const message = container.querySelector('.shipping-message span');
+        if (cartTotal >= threshold) {
+          switch(parseInt(goalData.selectedTab)) {
+            case 0:
+              message.textContent = goalData.freeShipping || 'Free Shipping! 🚚';
+              break;
+            case 1:
+              message.textContent = goalData.percent || `${goalData.percentageDiscount}% off`;
+              break;
+            case 2:
+              message.textContent = goalData.fixedAmount || `$${goalData.fixedAmountDiscount} off`;
+              break;
+            default:
+              message.textContent = goalData.freeShipping || 'Free Shipping! 🚚';
+          }
+        } else {
+          const formattedAmount = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+          }).format(remaining / 100);
+          
+          const defaultMessage = `Add ${formattedAmount} for free shipping! 🚚`;
+          message.textContent = (goalData.announcement || defaultMessage).replace('{{amount_left}}', formattedAmount);
+        }
+      });
+    }
+    
+    // Update on page load
+    updateShippingProgress();
+    
+    // Listen for cart updates
+    document.addEventListener('cart:updated', function(event) {
+      const containers = document.querySelectorAll('.shipping-remaining-container');
+      containers.forEach(container => {
+        container.setAttribute('data-cart-total', event.detail.cart.total_price);
+      });
+      
+      updateShippingProgress();
+    });
 
-    // Check if app is available
-    console.log('App available:', '{{ app.id }}');
-    console.log('App title:', '{{ app.title }}');
-    </script>
+    // Debug logging
+    console.group('Cart Progress Debug Info');
+    console.log('Design Settings:', {{ design_settings | json }});
+    console.log('Spending Goals:', {{ spending_goals | json }});
+    console.log('Cart Total:', {{ cart.total_price | json }});
+    
+    document.querySelectorAll('.shipping-remaining-container').forEach((container, index) => {
+      console.group(`Progress Bar ${index + 1}`);
+      console.log('Threshold:', container.getAttribute('data-threshold'));
+      console.log('Cart Total:', container.getAttribute('data-cart-total'));
+      console.log('Goal Data:', JSON.parse(container.getAttribute('data-goal')));
+      console.groupEnd();
+    });
+    
+    console.groupEnd();
+  </script>
+{% endif %}
