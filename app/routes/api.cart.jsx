@@ -104,7 +104,7 @@
 
 
 
-// api/settings.jsx
+
 import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 

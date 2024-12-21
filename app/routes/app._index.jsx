@@ -203,7 +203,7 @@ export default function Index() {
     try {
       const response = await fetcher.submit(
         { settings: JSON.stringify(settings) },
-        { method: "post", action: "/api/settings" },
+        { method: "POST", action: "/api/cart" },
       );
 
       setToastMessage("Settings saved successfully");

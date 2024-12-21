@@ -391,20 +391,6 @@ document.addEventListener('cart:updated', function(event) {
       updateShippingProgress();
     });
 
-    // Debug logging
-    console.group('Cart Progress Debug Info');
-    console.log('Design Settings:', {{ design_settings | json }});
-    console.log('Spending Goals:', {{ spending_goals | json }});
-    console.log('Cart Total:', {{ cart.total_price | json }});
     
-    document.querySelectorAll('.shipping-remaining-container').forEach((container, index) => {
-      console.group(`Progress Bar ${index + 1}`);
-      console.log('Threshold:', container.getAttribute('data-threshold'));
-      console.log('Cart Total:', container.getAttribute('data-cart-total'));
-      console.log('Goal Data:', JSON.parse(container.getAttribute('data-goal')));
-      console.groupEnd();
-    });
-    
-    console.groupEnd();
   </script>
 {% endif %}

@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "ee2546e837f8a6588645de087804f2f9"
-application_url = "https://configurations-bite-kiss-lm.trycloudflare.com"
+application_url = "https://bone-hungary-way-quiz.trycloudflare.com"
 embedded = true
 name = "cart-app"
 handle = "cart-app-48"
@@ -15,14 +15,13 @@ api_version = "2024-10"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products"
-scopes = "read_app_metafields" , "write_app_metafields"
+scopes = "write_products,read_product_listings,read_products"
 
 [auth]
 redirect_urls = [
-  "https://configurations-bite-kiss-lm.trycloudflare.com/auth/callback",
-  "https://configurations-bite-kiss-lm.trycloudflare.com/auth/shopify/callback",
-  "https://configurations-bite-kiss-lm.trycloudflare.com/api/auth/callback"
+  "https://bone-hungary-way-quiz.trycloudflare.com/auth/callback",
+  "https://bone-hungary-way-quiz.trycloudflare.com/auth/shopify/callback",
+  "https://bone-hungary-way-quiz.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
